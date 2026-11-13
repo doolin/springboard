@@ -98,10 +98,11 @@ check "GET /api/v1/users/username/${USERNAME} (public)" 200 \
 check 'GET /api/v1/users (protected, no credentials)' 403 "$(status GET /api/v1/users)"
 
 # --- Observation, not a pass/fail check --------------------------------
-# .trivyignore cites a 2 MB request cap (server.tomcat.max-http-post-size
-# and max-http-form-post-size) as the compensating control for
-# CVE-2023-35116. This posts a 3 MB JSON body and reports what the
-# application answers, so the control can be assessed against evidence.
+# application.properties sets a 2 MB form-post limit
+# (server.tomcat.max-http-post-size and max-http-form-post-size). That
+# limit does not apply to JSON bodies. This posts a 3 MB JSON body and
+# reports what the application answers: 400 means the body was read
+# and rejected by Bean Validation, not refused by the container.
 big_body="${WORK_DIR}/big.json"
 {
     printf '{"username":"%s","password":"' "${USERNAME}"
