@@ -61,8 +61,9 @@
 # pipeline stops and no downstream jobs execute.
 validate-commit-prefix:
   stage: validate-commit
+  # Image: Alpine + git. Script work only (git log, jq); no JDK or Node.
   image:
-    name: alpine/git:latest
+    name: alpine/git:latest@sha256:6a1fdb962814ca11508ca8d1bab94375b5b7ac4e4a9a40981c29fc32c02f095d
     entrypoint: [""]
   <<: *default-rules
   before_script:
@@ -190,8 +191,9 @@ validate-commit-prefix:
 # ---------------------------------------------------------------------
 secrets-scan:
   stage: compliance-check
+  # Image: the scanner's own minimal image; nothing else is needed.
   image:
-    name: zricethezav/gitleaks:v8.22.1
+    name: zricethezav/gitleaks:v8.22.1@sha256:3a0e453719419ad5b143013d5b9e92366d3fec485e913ed2631c6aca8c4390fb
     entrypoint: [""]
   <<: *default-rules
   variables:
@@ -229,7 +231,9 @@ secrets-scan:
 # ---------------------------------------------------------------------
 test:
   stage: compliance-check
-  image: eclipse-temurin:21-jdk
+  # Image: full JDK required (./mvnw verify compiles). Debian-based, not
+  # Alpine: the job installs Chrome from Google's apt repository.
+  image: eclipse-temurin:21-jdk@sha256:0a3f329821dcadf54b2a3033a15e2e9f007069a9db43d7f51897e6b80e726b07
   <<: *default-rules
   variables:
     # Hermetic H2 tests via the project's `test` profile. Must NOT set
@@ -282,7 +286,9 @@ test:
 # need an image that has it.
 e2e:
   stage: compliance-check
-  image: mcr.microsoft.com/playwright:v1.59.1-jammy
+  # Image: no slimmer variant; the job needs the preinstalled Chromium
+  # and WebKit (see above). Tag must match the @playwright/test version.
+  image: mcr.microsoft.com/playwright:v1.59.1-jammy@sha256:8a0360d39d1973be506dd59002904a774f6d697d4946c94063b3fd006461c8ff
   <<: *default-rules
   variables:
     # Playwright caches its browsers in this dir in the base image.
@@ -312,8 +318,13 @@ e2e:
 # ---------------------------------------------------------------------
 vulnerability-scan:
   stage: compliance-check
+  # Image: the scanner's own Alpine image; Node and npm for the npm audit
+  # step are added with apk in before_script. The apk Node is 20.15, below
+  # the range Angular 21 declares (npm prints EBADENGINE warnings; the
+  # audit still runs). Fixing that means a newer Trivy image, tracked
+  # separately from this pin.
   image:
-    name: aquasec/trivy:0.58.2
+    name: aquasec/trivy:0.58.2@sha256:665030f4d33a82c1e8d9d5e0453365842236723c1ee5cc3becca698268e66a56
     entrypoint: [""]
   <<: *default-rules
   variables:
@@ -361,7 +372,9 @@ vulnerability-scan:
 # ---------------------------------------------------------------------
 sbom:
   stage: compliance-sbom
-  image: eclipse-temurin:21-jdk
+  # Image: full JDK kept because the job runs ./mvnw; Debian-based for
+  # the NodeSource apt setup in before_script.
+  image: eclipse-temurin:21-jdk@sha256:0a3f329821dcadf54b2a3033a15e2e9f007069a9db43d7f51897e6b80e726b07
   <<: *default-rules
   needs:
     - job: test
@@ -395,7 +408,8 @@ sbom:
 # ---------------------------------------------------------------------
 oscal:
   stage: compliance-oscal
-  image: node:22-alpine
+  # Image: Alpine Node; the job runs one Node script with no native deps.
+  image: node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a
   <<: *default-rules
   needs:
     - job: secrets-scan
@@ -432,7 +446,10 @@ oscal:
 # ---------------------------------------------------------------------
 oscal-validate:
   stage: compliance-oscal
-  image: eclipse-temurin:21-jre
+  # Image: JRE only; oscal-cli is a packaged Java tool, nothing compiles.
+  # Not the Alpine JRE: the script uses apt-get on a cache miss and the
+  # oscal-cli launcher is a bash script.
+  image: eclipse-temurin:21-jre@sha256:18bb4a91a3dea3f03ee31d3755af34dfb40f904fc77ab56cdc2f092e32fff9c2
   <<: *default-rules
   needs:
     - job: oscal
@@ -489,7 +506,8 @@ oscal-validate:
 # ---------------------------------------------------------------------
 verify-evidence:
   stage: compliance-verify
-  image: node:22-alpine
+  # Image: Alpine Node; the job runs one Node script with no native deps.
+  image: node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a
   <<: *default-rules
   needs:
     - job: secrets-scan
