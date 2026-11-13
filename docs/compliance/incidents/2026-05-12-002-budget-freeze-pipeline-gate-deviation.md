@@ -162,14 +162,20 @@ only way to continue without buying minutes or attaching a runner.
   and lockfile-keyed caches
   ([SB-GL-54](https://gitlab.com/doolin/springboard/-/work_items/54)).
 - This report, and a pointer to it from `SECURITY.md`.
+- Path filters on merge request pipelines
+  ([SB-GL-56](https://gitlab.com/doolin/springboard/-/work_items/56),
+  merged 2026-11-13): a documentation-only merge request runs two
+  jobs instead of nine, and a backend-only one skips e2e. Pipelines
+  on `master` still run every job. Backend and frontend tests are
+  still one job, so a frontend-only change does not skip the backend
+  build.
+- CI image audit
+  ([SB-GL-57](https://gitlab.com/doolin/springboard/-/work_items/57),
+  merged 2026-11-13): every image is pinned by digest. No slimmer
+  image could be swapped in, so this did not reduce minutes.
 
 **Open.**
 
-- Further minute reduction:
-  [SB-GL-56](https://gitlab.com/doolin/springboard/-/work_items/56)
-  (per-job `rules:changes`) and
-  [SB-GL-57](https://gitlab.com/doolin/springboard/-/work_items/57)
-  (smaller CI images).
 - No fallback runner exists. If the quota runs out again, the same
   choice between stopping work and disabling the gate will recur.
 - The GitLab evidence for the 17 commits cannot be regenerated as it
