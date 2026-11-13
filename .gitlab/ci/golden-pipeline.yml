@@ -319,12 +319,12 @@ e2e:
 vulnerability-scan:
   stage: compliance-check
   # Image: the scanner's own Alpine image; Node and npm for the npm audit
-  # step are added with apk in before_script. The apk Node is 20.15, below
-  # the range Angular 21 declares (npm prints EBADENGINE warnings; the
-  # audit still runs). Fixing that means a newer Trivy image, tracked
-  # separately from this pin.
+  # step are added with apk in before_script. The Node version therefore
+  # follows the image's Alpine base. It must stay inside the range the
+  # frontend's Angular version declares; before_script prints it so the
+  # job log records the runtime used (SB-GL-66).
   image:
-    name: aquasec/trivy:0.58.2@sha256:665030f4d33a82c1e8d9d5e0453365842236723c1ee5cc3becca698268e66a56
+    name: aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
     entrypoint: [""]
   <<: *default-rules
   variables:
@@ -332,10 +332,29 @@ vulnerability-scan:
     # Project-relative so the cache: paths can reach it.
     TRIVY_CACHE_DIR: $CI_PROJECT_DIR/.trivy-cache
   cache:
-    - *cache-npm
+    # Read-only copy of the Maven repository the test job populates.
+    # Trivy resolves the parent POM and imported BOMs of pom.xml; with
+    # no local copy it fetches them from Maven Central, which rate-limits
+    # shared runner addresses (HTTP 429, fatal in Trivy 0.76). On a cold
+    # cache Trivy still falls back to the network, so the scan fails
+    # closed rather than skipping dependencies.
+    #
+    # Order matters: GitLab prefixes a files-based cache key with its
+    # position in this list, so Maven must be first and npm second, as
+    # in the test job, for the keys to match the caches that job saves.
+    # Both are pull-only here: this job installs production dependencies
+    # only and must not overwrite the full caches the test job saves.
+    - <<: *cache-maven
+      policy: pull
+    - <<: *cache-npm
+      policy: pull
     - *cache-trivy
   before_script:
     - apk add --no-cache nodejs npm jq curl bash
+    - node --version && npm --version && trivy --version
+    # Trivy looks for the local Maven repository under $HOME/.m2.
+    - mkdir -p "$CI_PROJECT_DIR/.m2/repository"
+    - ln -sfn "$CI_PROJECT_DIR/.m2" "$HOME/.m2"
   script:
     # npm audit — production deps only
     - cd $FRONTEND_DIR
@@ -346,14 +365,16 @@ vulnerability-scan:
     # Trivy — fs scan. JSON evidence first (always captured), then
     # summary, then the gating table run. Uses the same .trivyignore
     # the GitHub pipeline uses so the ignore list stays authoritative.
-    - trivy fs --format json --output trivy-results.json --severity $TRIVY_SEVERITY --ignore-unfixed --ignorefile .trivyignore --exit-code 0 .
+    # .m2 is skipped as a scan target: it is the restored Maven cache,
+    # used for resolution only, not project content.
+    - trivy fs --format json --output trivy-results.json --severity $TRIVY_SEVERITY --ignore-unfixed --ignorefile .trivyignore --skip-dirs .m2 --exit-code 0 .
     - |
       count=$(jq '[.Results[]?.Vulnerabilities[]?] | length' trivy-results.json 2>/dev/null || echo 0)
       echo "Trivy findings at severity=$TRIVY_SEVERITY (fixed-only, ignore-unfixed, .trivyignore applied): $count"
       if [ "$count" -gt 0 ]; then
         jq -r '[.Results[]?.Vulnerabilities[]?] | unique_by(.VulnerabilityID + .PkgName) | .[] | "\(.VulnerabilityID)\t\(.Severity)\t\(.PkgName)\t\(.InstalledVersion)\t\(.FixedVersion // "-")"' trivy-results.json
       fi
-    - trivy fs --format table --severity $TRIVY_SEVERITY --ignore-unfixed --ignorefile .trivyignore --exit-code 1 .
+    - trivy fs --format table --severity $TRIVY_SEVERITY --ignore-unfixed --ignorefile .trivyignore --skip-dirs .m2 --exit-code 1 .
   after_script:
     - |
       event="{\"event\":\"vulnerability_scan\",\"severity\":\"info\",\"stage\":\"PW.7_PW.8\",\"status\":\"$CI_JOB_STATUS\",\"pipeline_id\":\"$CI_PIPELINE_ID\",\"commit\":\"$CI_COMMIT_SHA\",\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
