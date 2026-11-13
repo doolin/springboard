@@ -43,15 +43,16 @@ jobs:
     name: Golden Pipeline
     uses: ./.github/workflows/golden-pipeline.yml
     with:
-      java-version: "17"
-      node-version: "20.11.1"
+      java-version: "21"
+      node-version: "22.22.2"
       # Gate the build on CRITICAL and HIGH. Baseline cleared via SB-GL-26/
       # 27/28 (cluster suppressions with code-path audits), SB-GL-47 (postgresql
       # bump), SB-GL-48 (spring-boot suppressions), SB-GL-49 (spring-core
       # suppress), SB-GL-50 (BCrypt-input compensating control), SB-GL-51
-      # (jackson-bom bump). Every HIGH finding is either remediated at the
-      # dependency level or documented in .trivyignore with a code-path audit
-      # + SP 800-53 SI-2 alternative-implementation rationale.
+      # (jackson-bom bump). Since the Spring Boot 4.1.2 move (SB-GL-39) every
+      # finding is remediated at the dependency level and .trivyignore holds
+      # no entries (SB-GL-62). Any future suppression needs a code-path
+      # audit + SP 800-53 SI-2 alternative-implementation rationale.
       trivy-severity: "CRITICAL,HIGH"
     permissions:
       contents: read
@@ -61,7 +62,7 @@ jobs:
     secrets: inherit
 ```
 
-The caller passes repo-specific inputs (Java 17, Node 20, CRITICAL+HIGH Trivy gate) and inherits secrets. The `compliance` job is the gate — nothing downstream runs if it fails.
+The caller passes repo-specific inputs (Java 21, Node 22, CRITICAL+HIGH Trivy gate) and inherits secrets. The `compliance` job is the gate — nothing downstream runs if it fails.
 
 **Gate elevation history.** From inception through SB-GL-28, the Trivy gate ran at `CRITICAL` only — HIGH findings were captured as evidence (JSON step) but did not fail the build. That was a deliberate development-phase compromise: gate elevation requires a clean HIGH baseline, which required first auditing or remediating every HIGH finding on master. After the cluster-and-decomposed CVE work landed (SB-GL-26 through SB-GL-51 in 2026-05-13), the local Trivy baseline reached zero unsuppressed HIGH and the elevation became safe. SB-GL-29 ([commit forthcoming]) flips the gate to `CRITICAL,HIGH` in both forge callers — turning previously-captured-but-not-gated HIGH evidence into actively-gated security posture. This is the assurance-vs-compliance close-out called out in the project's strategic-thread memory.
 
@@ -211,7 +212,9 @@ The JSON evidence scan uses `exit-code: 0` (always succeeds, captures evidence).
 
 **Suppression strategy and dossier drift.** Trivy findings split into two classes: *fixable in our pinned version* (must be remediated) and *fixable only in a major version we cannot upgrade to* (must be either upgraded or suppressed with documented justification). For the second class, the project keeps `.trivyignore` as a suppress-with-justification record. Each entry SHALL carry the CVE identifier, the audit command(s) that confirmed the exploitable surface is absent from this application, a removal condition (typically: "when SB-GL-39 Spring Boot 3 migration lands"), and a quarterly review date.
 
-The decision matrix for the current Spring Boot 2.7 BOM-locked CVE landscape is captured in [`docs/compliance/research/2026-05-12-cve-dossier.md`](compliance/research/2026-05-12-cve-dossier.md). That dossier is the input to the per-cluster suppression tickets (SB-GL-26 Spring framework cluster, SB-GL-27 logback cluster, SB-GL-28 jackson cluster, SB-GL-29 Trivy severity gate elevation).
+**Status as of 2026-11-13.** `.trivyignore` holds no entries. The move to Spring Boot 4.1.2 ([SB-GL-39](https://gitlab.com/doolin/springboard/-/work_items/39)) met the removal condition of every suppression, and all 15 were removed in [SB-GL-62](https://gitlab.com/doolin/springboard/-/work_items/62). The rest of this section describes how the suppressions were built and is kept as the record of that work.
+
+The decision matrix for the Spring Boot 2.7 BOM-locked CVE landscape, as it stood in May 2026, is captured in [`docs/compliance/research/2026-05-12-cve-dossier.md`](compliance/research/2026-05-12-cve-dossier.md). That dossier is the input to the per-cluster suppression tickets (SB-GL-26 Spring framework cluster, SB-GL-27 logback cluster, SB-GL-28 jackson cluster, SB-GL-29 Trivy severity gate elevation).
 
 A dossier is a *point-in-time snapshot*, not a continuously-correct source of truth. The CVE database evolves: between authorship and execution, new HIGH findings may surface, others may roll off. On 2026-05-13 we explicitly chose to **continue executing the dossier's planned cluster tickets as written** rather than pausing to re-audit, on these grounds:
 
@@ -358,10 +361,10 @@ sed -n '40,94p' .github/workflows/ci-cd.yml
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
-          java-version: "17"
+          java-version: "21"
           distribution: temurin
           cache: maven
 

@@ -30,9 +30,10 @@ jobs:
       # 27/28 (cluster suppressions with code-path audits), SB-GL-47 (postgresql
       # bump), SB-GL-48 (spring-boot suppressions), SB-GL-49 (spring-core
       # suppress), SB-GL-50 (BCrypt-input compensating control), SB-GL-51
-      # (jackson-bom bump). Every HIGH finding is either remediated at the
-      # dependency level or documented in .trivyignore with a code-path audit
-      # + SP 800-53 SI-2 alternative-implementation rationale.
+      # (jackson-bom bump). Since the Spring Boot 4.1.2 move (SB-GL-39) every
+      # finding is remediated at the dependency level and .trivyignore holds
+      # no entries (SB-GL-62). Any future suppression needs a code-path
+      # audit + SP 800-53 SI-2 alternative-implementation rationale.
       trivy-severity: "CRITICAL,HIGH"
     permissions:
       # Caller bounds: must include the union of permissions any nested
@@ -116,7 +117,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Set up Node 20
+      - name: Set up Node 22
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: "22"

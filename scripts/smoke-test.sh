@@ -83,8 +83,9 @@ check 'POST /api/v1/auth/login' 200 "$(status POST /api/v1/auth/login \
 check 'POST /api/v1/auth/login, wrong password' 401 "$(status POST /api/v1/auth/login \
     "{\"username\":\"${USERNAME}\",\"password\":\"not-the-password\"}")"
 
-# Compensating control for CVE-2025-22228: passwords over 72 characters
-# are rejected by Bean Validation before they reach BCrypt.
+# Input validation (formerly the compensating control for
+# CVE-2025-22228): passwords over 72 characters are rejected by Bean
+# Validation before they reach BCrypt.
 check 'POST /api/v1/auth/login, 100-char password' 400 "$(status POST /api/v1/auth/login \
     "{\"username\":\"${USERNAME}\",\"password\":\"${LONG_PASSWORD}\"}")"
 

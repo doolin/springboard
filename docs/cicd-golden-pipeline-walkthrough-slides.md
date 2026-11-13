@@ -51,8 +51,8 @@ jobs:
     name: Golden Pipeline
     uses: ./.github/workflows/golden-pipeline.yml
     with:
-      java-version: "17"
-      node-version: "20.11.1"
+      java-version: "21"
+      node-version: "22.22.2"
       # Initial baseline: gate the build on CRITICAL only. HIGH findings are
       # still captured as evidence (Trivy JSON step) but not failing yet —
       # remediation tracked separately. Raise back to "CRITICAL,HIGH" once
@@ -66,7 +66,7 @@ jobs:
     secrets: inherit
 ```
 
-The caller passes repo-specific inputs (Java 17, Node 20, CRITICAL-only Trivy gate) and inherits secrets. The `compliance` job is the gate — nothing downstream runs if it fails.
+The caller passes repo-specific inputs (Java 21, Node 22, CRITICAL-only Trivy gate) and inherits secrets. The `compliance` job is the gate — nothing downstream runs if it fails.
 
 ---
 
@@ -355,10 +355,10 @@ sed -n '40,94p' .github/workflows/ci-cd.yml
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
-          java-version: "17"
+          java-version: "21"
           distribution: temurin
           cache: maven
 

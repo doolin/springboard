@@ -55,8 +55,9 @@ class AuthControllerTest {
     }
 
     // 73-character password — one past the BCryptPasswordEncoder 72-byte
-    // input limit. The DTO @Size(max = 72) cap is the compensating control
-    // for CVE-2025-22228 (SB-GL-50); both register and login must reject
+    // input limit. The DTO @Size(max = 72) cap was added as the
+    // compensating control for CVE-2025-22228 (SB-GL-50) and is kept as
+    // input validation (SB-GL-62); both register and login must reject
     // longer inputs before they reach BCryptPasswordEncoder.matches().
     private static final String PASSWORD_73 = "a".repeat(73);
 

@@ -13,10 +13,10 @@ public class RegisterRequest {
     @Email(message = "Email should be valid")
     private String email;
 
-    // Max 72 enforces BCryptPasswordEncoder.matches() input bounds, which is
-    // the compensating control for CVE-2025-22228 (SB-GL-50). Without this
-    // cap, BCrypt silently matches any password whose first 72 bytes match
-    // the stored hash's pre-image.
+    // Max 72 matches BCrypt's input limit: it reads at most 72 bytes of a
+    // password. Added in SB-GL-50 as the compensating control for
+    // CVE-2025-22228; since Spring Security 7 carries the fix it is plain
+    // input validation (SB-GL-62).
     @NotBlank(message = "Password is required")
     @Size(min = 6, max = 72, message = "Password must be between 6 and 72 characters")
     private String password;
