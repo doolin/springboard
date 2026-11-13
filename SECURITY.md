@@ -258,8 +258,14 @@ bundle (`artifact-class: change-authorization-trace`,
 
 ## Security pipeline
 
-The CI/CD pipeline runs on every PR and emits machine-readable
-evidence:
+The CI/CD pipeline runs on every PR and on every commit to `master`.
+On `master` every stage below runs. On a GitLab merge request, the
+commit-prefix check and the secrets scan always run; the remaining
+stages run when the change touches code, build, pipeline or scan
+configuration, and are skipped for documentation-only changes (path
+lists in `.gitlab/ci/golden-pipeline.yml`,
+[SB-GL-56](https://gitlab.com/doolin/springboard/-/work_items/56)).
+The pipeline emits machine-readable evidence:
 
 - **gitleaks** — secrets scan over full git history (PW.6)
 - **npm audit** — production-tree advisories (PW.7)

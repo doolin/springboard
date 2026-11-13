@@ -15,6 +15,53 @@
   rules:
     - when: on_success
 
+# Per-job path filters for merge request pipelines (SB-GL-56).
+#
+# Pipelines on the default branch always run every job: the first rule
+# in each block matches anything that is not a merge request pipeline,
+# so the evidence bundle for a commit on master is always complete.
+#
+# On a merge request, a job runs only if the MR changes a path in its
+# list. GitLab cannot express "everything except docs", so the lists
+# name what counts. When a new top-level file or directory can affect
+# the build, the tests or the scans, add it here: a path missing from
+# the list means the job is skipped for changes to it. Over-inclusion
+# only costs minutes.
+#
+# Jobs and their filter:
+#   validate-commit-prefix, secrets-scan  always run
+#   test, vulnerability-scan, sbom,
+#   oscal, oscal-validate, verify-evidence  .rules-code
+#   e2e                                     .rules-frontend
+#
+# test is one job for backend and frontend (./mvnw verify builds the
+# frontend too), so it cannot be narrowed further without splitting it.
+.rules-code: &rules-code
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+    - changes:
+        paths:
+          - src/**/*
+          - pom.xml
+          - mvnw
+          - mvnw.cmd
+          - .mvn/**/*
+          - checkstyle.xml
+          - scripts/**/*
+          - docker/**/*
+          - .trivyignore
+          - .gitlab-ci.yml
+          - .gitlab/**/*
+
+.rules-frontend: &rules-frontend
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+    - changes:
+        paths:
+          - src/main/frontend/**/*
+          - .gitlab-ci.yml
+          - .gitlab/**/*
+
 .artifacts-defaults: &artifacts-defaults
   expire_in: 90 days
   when: always
@@ -234,7 +281,7 @@ test:
   # Image: full JDK required (./mvnw verify compiles). Debian-based, not
   # Alpine: the job installs Chrome from Google's apt repository.
   image: eclipse-temurin:21-jdk@sha256:0a3f329821dcadf54b2a3033a15e2e9f007069a9db43d7f51897e6b80e726b07
-  <<: *default-rules
+  <<: *rules-code
   variables:
     # Hermetic H2 tests via the project's `test` profile. Must NOT set
     # SPRING_DATASOURCE_* here — env vars would override H2 config.
@@ -289,7 +336,7 @@ e2e:
   # Image: no slimmer variant; the job needs the preinstalled Chromium
   # and WebKit (see above). Tag must match the @playwright/test version.
   image: mcr.microsoft.com/playwright:v1.59.1-jammy@sha256:8a0360d39d1973be506dd59002904a774f6d697d4946c94063b3fd006461c8ff
-  <<: *default-rules
+  <<: *rules-frontend
   variables:
     # Playwright caches its browsers in this dir in the base image.
     # Leaving it alone lets the preinstalled browsers be used.
@@ -326,7 +373,7 @@ vulnerability-scan:
   image:
     name: aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
     entrypoint: [""]
-  <<: *default-rules
+  <<: *rules-code
   variables:
     TRIVY_NO_PROGRESS: "true"
     # Project-relative so the cache: paths can reach it.
@@ -396,7 +443,7 @@ sbom:
   # Image: full JDK kept because the job runs ./mvnw; Debian-based for
   # the NodeSource apt setup in before_script.
   image: eclipse-temurin:21-jdk@sha256:0a3f329821dcadf54b2a3033a15e2e9f007069a9db43d7f51897e6b80e726b07
-  <<: *default-rules
+  <<: *rules-code
   needs:
     - job: test
       artifacts: false
@@ -431,7 +478,7 @@ oscal:
   stage: compliance-oscal
   # Image: Alpine Node; the job runs one Node script with no native deps.
   image: node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a
-  <<: *default-rules
+  <<: *rules-code
   needs:
     - job: secrets-scan
       artifacts: true
@@ -471,7 +518,7 @@ oscal-validate:
   # Not the Alpine JRE: the script uses apt-get on a cache miss and the
   # oscal-cli launcher is a bash script.
   image: eclipse-temurin:21-jre@sha256:18bb4a91a3dea3f03ee31d3755af34dfb40f904fc77ab56cdc2f092e32fff9c2
-  <<: *default-rules
+  <<: *rules-code
   needs:
     - job: oscal
       artifacts: true
@@ -529,14 +576,17 @@ verify-evidence:
   stage: compliance-verify
   # Image: Alpine Node; the job runs one Node script with no native deps.
   image: node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a
-  <<: *default-rules
+  <<: *rules-code
   needs:
     - job: secrets-scan
       artifacts: true
     - job: test
       artifacts: true
+    # Optional: e2e is skipped on merge requests that do not touch the
+    # frontend. The manifest does not require its artifacts.
     - job: e2e
       artifacts: true
+      optional: true
     - job: vulnerability-scan
       artifacts: true
     - job: sbom
