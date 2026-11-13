@@ -83,7 +83,10 @@ implemented in this development phase.
    UI. The binding is configuration-enforced, not maintainer
    discipline. The measure does **not** provide duty separation; it
    provides post-hoc, configuration-gated attributability of the
-   unilateral merge.
+   unilateral merge. *Known deviation:* from 2026-05-12 to 2026-05-28
+   the binding was switched off during a CI budget freeze and 17
+   commits reached `master` without a GitLab evidence bundle; see
+   [INC-2026-05-12-002][inc-002].
 
 2. *Out-of-band review for security-relevant changes — partial
    configuration binding.* Work items carrying `area/security` or
@@ -217,6 +220,7 @@ conformance with [SSDF PS.3.1][ssdf] and OMB M-24-15
 [sb-gl-39]: https://gitlab.com/doolin/springboard/-/work_items/39
 [sb-gl-50]: https://gitlab.com/doolin/springboard/-/work_items/50
 [sb-gl-62]: https://gitlab.com/doolin/springboard/-/work_items/62
+[inc-002]: ./docs/compliance/incidents/2026-05-12-002-budget-freeze-pipeline-gate-deviation.md
 [cve-22228]: https://spring.io/security/cve-2025-22228
 
 ## What to expect
