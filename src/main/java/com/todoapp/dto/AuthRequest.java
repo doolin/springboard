@@ -1,7 +1,7 @@
 package com.todoapp.dto;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public class AuthRequest {
     @NotBlank(message = "Username is required")

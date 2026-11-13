@@ -229,7 +229,7 @@ secrets-scan:
 # ---------------------------------------------------------------------
 test:
   stage: compliance-check
-  image: eclipse-temurin:17-jdk
+  image: eclipse-temurin:21-jdk
   <<: *default-rules
   variables:
     # Hermetic H2 tests via the project's `test` profile. Must NOT set
@@ -361,7 +361,7 @@ vulnerability-scan:
 # ---------------------------------------------------------------------
 sbom:
   stage: compliance-sbom
-  image: eclipse-temurin:17-jdk
+  image: eclipse-temurin:21-jdk
   <<: *default-rules
   needs:
     - job: test
@@ -432,7 +432,7 @@ oscal:
 # ---------------------------------------------------------------------
 oscal-validate:
   stage: compliance-oscal
-  image: eclipse-temurin:17-jre
+  image: eclipse-temurin:21-jre
   <<: *default-rules
   needs:
     - job: oscal

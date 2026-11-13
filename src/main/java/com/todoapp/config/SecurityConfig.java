@@ -11,7 +11,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -31,14 +30,12 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
         http
-            .requestMatchers(matchers -> matchers
-                .antMatchers("/api/v1/**")
-            )
+            .securityMatcher("/api/v1/**")
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(new AntPathRequestMatcher("/api/v1/auth/**")).permitAll()
-                .requestMatchers(new AntPathRequestMatcher("/api/v1/todos/**")).permitAll()
-                .requestMatchers(new AntPathRequestMatcher("/api/v1/users/username/**")).permitAll()
+                .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers("/api/v1/todos/**").permitAll()
+                .requestMatchers("/api/v1/users/username/**").permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
@@ -51,27 +48,25 @@ public class SecurityConfig {
     @Order(2)
     public SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
         http
-            .requestMatchers(matchers -> matchers
-                .antMatchers("/**")
-            )
+            .securityMatcher("/**")
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    new AntPathRequestMatcher("/"),
-                    new AntPathRequestMatcher("/index.html"),
-                    new AntPathRequestMatcher("/assets/**"),
-                    new AntPathRequestMatcher("/*.js"),
-                    new AntPathRequestMatcher("/*.css"),
-                    new AntPathRequestMatcher("/*.ico"),
-                    new AntPathRequestMatcher("/*.png"),
-                    new AntPathRequestMatcher("/*.svg"),
-                    new AntPathRequestMatcher("/api/v1/auth/**"),
-                    new AntPathRequestMatcher("/api/v1/todos/**"),
-                    new AntPathRequestMatcher("/api/v1/users/username/**"),
-                    new AntPathRequestMatcher("/register"),
-                    new AntPathRequestMatcher("/login"),
-                    new AntPathRequestMatcher("/todos"),
-                    new AntPathRequestMatcher("/error")
+                    "/",
+                    "/index.html",
+                    "/assets/**",
+                    "/*.js",
+                    "/*.css",
+                    "/*.ico",
+                    "/*.png",
+                    "/*.svg",
+                    "/api/v1/auth/**",
+                    "/api/v1/todos/**",
+                    "/api/v1/users/username/**",
+                    "/register",
+                    "/login",
+                    "/todos",
+                    "/error"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
@@ -80,4 +75,4 @@ public class SecurityConfig {
             );
         return http.build();
     }
-} 
+}

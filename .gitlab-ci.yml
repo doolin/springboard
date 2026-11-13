@@ -36,7 +36,7 @@ stages:
   - attest                # main/master only: Solana on-chain attestation
 
 variables:
-  JAVA_VERSION: "17"
+  JAVA_VERSION: "21"
   NODE_VERSION: "22.22.2"
   FRONTEND_DIR: "src/main/frontend"
   # Gate the build on CRITICAL and HIGH. Matches .github/workflows/ci-cd.yml.
@@ -62,7 +62,7 @@ include:
 
 package:
   stage: package
-  image: eclipse-temurin:17-jdk
+  image: eclipse-temurin:21-jdk
   interruptible: false   # Produces the release JAR + checksum; do not cancel mid-run.
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'

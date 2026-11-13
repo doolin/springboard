@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:21-jre
 RUN apt-get update -qq && apt-get install -y -qq postgresql-client curl > /dev/null 2>&1
 WORKDIR /app
 COPY target/todo-app-*.jar app.jar
