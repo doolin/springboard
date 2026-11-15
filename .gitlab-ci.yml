@@ -176,6 +176,10 @@ attest:
       fi
   script:
     - node scripts/attest.mjs
+    # SB-GL-69: tag every archived object and read the tags back into
+    # tag-manifest.json for Athena; the solana-cicd-hash skill's tagger,
+    # which finds the run by commit. Exits 0 when no bucket is set.
+    - EVIDENCE_DIRS=ci-artifacts,ci-output OUTPUT_DIR=ci-output AWS_REGION="${AWS_REGION:-us-east-1}" node scripts/tag-evidence.mjs
   after_script:
     - rm -f "$SOLANA_KEYPAIR_PATH" "$AWS_WEB_IDENTITY_TOKEN_FILE"
     - |
@@ -191,6 +195,7 @@ attest:
       - ci-output/s3-receipt.json
       - ci-output/timestamp.tsr
       - ci-output/tsa-certchain.pem
+      - ci-output/tag-manifest.json
 
 # Future work (tracked in-skill via cross-refs):
 #   deploy: per-env Helm / k8s / Lambda — needs infra + deploy token

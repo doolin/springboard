@@ -160,6 +160,21 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
         run: node scripts/attest.mjs
 
+      # SB-GL-69: tag every archived object with its artifact class, SSDF
+      # task, and SP 800-53 controls; read the tags back into
+      # tag-manifest.json for Athena (form-terra ci_audit.evidence_tags).
+      # scripts/tag-evidence.mjs and scripts/evidence-tags.json are the
+      # solana-cicd-hash skill's copies; the run is found by commit.
+      - name: Tag the evidence in S3
+        if: vars.S3_COMPLIANCE_BUCKET != ''
+        env:
+          EVIDENCE_BUNDLE: ${{ vars.EVIDENCE_BUNDLE }}
+          S3_COMPLIANCE_BUCKET: ${{ vars.S3_COMPLIANCE_BUCKET }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+          EVIDENCE_DIRS: ci-artifacts,ci-output
+          OUTPUT_DIR: ci-output
+        run: node scripts/tag-evidence.mjs
+
       - name: Upload attestation artifacts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -172,6 +187,9 @@ jobs:
             ci-output/timestamp.tsr
             ci-output/tsa-certchain.pem
             ci-output/s3-receipt.json
+            ci-output/tag-manifest.json
+          # GitHub's copy only; the archived evidence's retention is the
+          # compliance bucket's, per its NARA GRS item.
           retention-days: 90
 
       - name: Cleanup keypair
